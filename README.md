@@ -58,13 +58,15 @@ follow [Building](docs/BUILDING.md).
 
 ## Components
 
+Component versions are recorded in [`versions.json`](versions.json).
+
 | Component | Current development build | Purpose |
 | --- | --- | --- |
-| `NXSync.nro` | `0.30.11-rc1` | GUI, configuration, catalog, manual backup/restore and diagnostics |
-| Resident observer | `0.14.5-rc1` | Watches application lifecycle events and queues work |
-| Transient worker | `0.8.8-rc1` | Executes preflight, backup, restore and Nextcloud operations |
-| Ultrahand overlay | `0.3.21-rc1` | Shows status and asks the user to resolve launch conflicts |
-| Installer NRO | `0.1.12-rc1` | Selects and installs only an exact compatible Atmosphère payload |
+| `NXSync.nro` | `0.30.12-rc2` | GUI, configuration, catalog, manual backup/restore and diagnostics |
+| Resident observer | `0.14.6-rc1` | Watches application lifecycle events and queues work |
+| Transient worker | `0.8.9-rc1` | Executes preflight, backup, restore and Nextcloud operations |
+| Ultrahand overlay | `0.3.22-rc1` | Shows status and asks the user to resolve launch conflicts |
+| Installer NRO | `0.1.13-rc2` | Selects and installs only an exact compatible Atmosphère payload |
 | Atmosphère integration | version-specific | Patched `dmnt` content override selected by exact Atmosphère hashes |
 
 The resident observer intentionally does not create ZIP archives or contact
@@ -86,6 +88,7 @@ Compatibility is exact, not a version range. See
 ## Repository layout
 
 ```text
+assets/icons/         Original artwork and embedded homebrew-menu icons
 include/nxsync/       Shared public headers
 source/               NRO implementation and shared portable logic
 sysmodule/            Resident lifecycle observer (program ID 4200000000004E58)
