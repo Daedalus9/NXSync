@@ -86,6 +86,11 @@ Atmosphère 1.8.0 additionally pins the exact `libnx` commit recorded in
 bind-mounts it over the container's `libnx` only for that `dmnt` build; it does not
 modify the Docker image or host devkitPro installation.
 
+The helper packs `dmnt.nsp` with a fixed PFS0 entry order: `main`, then
+`main.npdm`. This keeps its SHA-256 independent of filesystem directory
+enumeration order. Both compiled files are preserved byte-for-byte, and the
+published dmnt and ROMFS hashes remain mandatory staging checks.
+
 The copied `package3` remains the byte-identical official file and is never installed
 or modified by NXSync; it is retained as build evidence and installer identity data.
 The patched ROMFS remains build evidence proving that only `dmnt` changed. Its hash

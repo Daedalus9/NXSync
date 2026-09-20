@@ -9,6 +9,7 @@ import json
 import os
 import shutil
 import stat
+import struct
 import subprocess
 import sys
 import tarfile
@@ -269,6 +270,32 @@ def find_dmnt_nsp(worktree: Path) -> Path:
     if not candidates:
         raise RuntimeError("Patched dmnt.nsp was not generated")
     return candidates[0]
+
+
+def build_dmnt_nsp(target: Path) -> None:
+    """Pack the compiled ExeFS in a fixed order, independent of the filesystem."""
+    entries = []
+    for name, suffix, magic in (
+        (b"main", ".nso", b"NSO0"),
+        (b"main.npdm", ".npdm", b"META"),
+    ):
+        source = target.with_suffix(suffix)
+        data = source.read_bytes()
+        if not data.startswith(magic):
+            raise RuntimeError(f"Invalid compiled dmnt input: {source}")
+        entries.append((name, data))
+
+    # PFS0 uses little-endian entries and a string table padded to 0x20 bytes.
+    names = b"".join(name + b"\0" for name, _ in entries)
+    names += b"\0" * (-len(names) % 0x20)
+    header = struct.pack("<4sIII", b"PFS0", len(entries), len(names), 0)
+    offset = 0
+    name_offset = 0
+    for name, data in entries:
+        header += struct.pack("<QQII", offset, len(data), name_offset, 0)
+        offset += len(data)
+        name_offset += len(name) + 1
+    target.write_bytes(header + names + b"".join(data for _, data in entries))
 
 
 def download_official_release(build: dict[str, object], version: str) -> Path:
@@ -608,6 +635,7 @@ def main() -> int:
 
         official_tree = hash_file_tree(extracted)
         patched_dmnt = find_dmnt_nsp(build_tree)
+        build_dmnt_nsp(patched_dmnt)
         embedded_dmnt = (
             extracted
             / "atmosphere"

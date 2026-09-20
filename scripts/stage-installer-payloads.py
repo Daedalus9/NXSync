@@ -158,7 +158,11 @@ def main() -> int:
         if not isinstance(patched_dmnt_hash, str) or len(patched_dmnt_hash) != 64:
             raise RuntimeError(f"Missing patched dmnt hash for Atmosphere {version}")
         if patched_dmnt_hash != build.get("nxsync_dmnt_override_sha256"):
-            raise RuntimeError(f"Published dmnt hash mismatch for Atmosphere {version}")
+            raise RuntimeError(
+                f"Published dmnt hash mismatch for Atmosphere {version}: "
+                f"built {patched_dmnt_hash}, "
+                f"expected {build.get('nxsync_dmnt_override_sha256')}"
+            )
 
         expected_romfs = build.get("nxsync_stratosphere_romfs_sha256") or None
         metadata_romfs = metadata.get("stratosphere_romfs_sha256")

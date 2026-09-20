@@ -281,6 +281,7 @@ target_compile_features(qr_code_test PRIVATE cxx_std_17)
 target_include_directories(qr_code_test PRIVATE ../include ../third_party/qrcodegen)
 add_test(NAME qr_code_test COMMAND qr_code_test)
 add_test(NAME installer_romfs_test COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/installer_romfs_test.py)
+add_test(NAME atmosphere_payload_test COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/atmosphere_payload_test.py)
 add_test(NAME release_source_test COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/release_source_test.py)
 
 find_path(MBEDTLS_INCLUDE_DIR mbedtls/gcm.h REQUIRED)
