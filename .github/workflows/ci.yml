@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  host-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install host test dependencies
+        run: sudo apt-get update && sudo apt-get install -y libmbedtls-dev libcurl4-openssl-dev openssl
+
+      - name: Validate public tree
+        run: python3 scripts/check-public-tree.py
+      - name: Validate component versions
+        run: python3 scripts/check-versions.py
+      - name: Validate licensing and source obligations
+        run: python3 scripts/check-licensing.py
+      - name: Configure
+        run: cmake -S tests -B build-tests -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build-tests --parallel 2
+      - name: Test
+        run: ctest --test-dir build-tests --output-on-failure
+
+  switch-components:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Validate licensing and source obligations
+        run: python3 scripts/check-licensing.py
+      - name: Build NRO, observer, worker and overlay
+        run: >-
+          docker run --rm
+          --mount type=bind,source="$GITHUB_WORKSPACE",target=/project
+          -w /project
+          devkitpro/devkita64:20260219@sha256:1fc388c3a0d34bd2045a6dadcb1020e069d5f876a187fd705de14b4440c00282
+          make -j2 components

@@ -1,0 +1,83 @@
+{
+    "name": "nxsync-cloud-worker",
+    "title_id": "0x4200000000004E59",
+    "title_id_range_min": "0x4200000000004E59",
+    "title_id_range_max": "0x4200000000004E59",
+    "main_thread_stack_size": "0x00040000",
+    "main_thread_priority": 44,
+    "default_cpu_id": 3,
+    "process_category": 0,
+    "is_retail": true,
+    "pool_partition": 1,
+    "is_64_bit": true,
+    "address_space_type": 1,
+    "filesystem_access": {
+        "permissions": "0x0000000000200020"
+    },
+    "service_access": [
+        "fsp-srv", "set:sys", "set", "set:cal", "acc:su", "ns:am2", "time:u",
+        "bsd:u", "nifm:u", "ssl", "sfdnsres", "csrng", "spl:", "spl:mig"
+    ],
+    "service_host": [],
+    "kernel_capabilities": [{
+        "type": "kernel_flags",
+        "value": {
+            "highest_thread_priority": 63,
+            "lowest_thread_priority": 24,
+            "lowest_cpu_id": 3,
+            "highest_cpu_id": 3
+        }
+    }, {
+        "type": "syscalls",
+        "value": {
+            "svcSetHeapSize": "0x01",
+            "svcSetMemoryPermission": "0x02",
+            "svcSetMemoryAttribute": "0x03",
+            "svcMapMemory": "0x04",
+            "svcUnmapMemory": "0x05",
+            "svcQueryMemory": "0x06",
+            "svcExitProcess": "0x07",
+            "svcCreateThread": "0x08",
+            "svcStartThread": "0x09",
+            "svcExitThread": "0x0a",
+            "svcSleepThread": "0x0b",
+            "svcClearEvent": "0x12",
+            "svcMapSharedMemory": "0x13",
+            "svcUnmapSharedMemory": "0x14",
+            "svcCreateTransferMemory": "0x15",
+            "svcCloseHandle": "0x16",
+            "svcResetSignal": "0x17",
+            "svcWaitSynchronization": "0x18",
+            "svcCancelSynchronization": "0x19",
+            "svcArbitrateLock": "0x1a",
+            "svcArbitrateUnlock": "0x1b",
+            "svcWaitProcessWideKeyAtomic": "0x1c",
+            "svcSignalProcessWideKey": "0x1d",
+            "svcConnectToNamedPort": "0x1f",
+            "svcSendSyncRequest": "0x21",
+            "svcBreak": "0x26",
+            "svcOutputDebugString": "0x27",
+            "svcReturnFromException": "0x28",
+            "svcGetInfo": "0x29",
+            "svcWaitForAddress": "0x34",
+            "svcSignalToAddress": "0x35"
+            ,"svcUnmapTransferMemory": "0x52"
+        }
+    }, {
+        "type": "application_type",
+        "value": 2
+    }, {
+        "type": "min_kernel_version",
+        "value": "0x0030"
+    }, {
+        "type": "handle_table_size",
+        "value": 64
+    }, {
+        "type": "debug_flags",
+        "value": {
+            "allow_debug": false,
+            "force_debug": false,
+            "force_debug_prod": false
+        }
+    }]
+}

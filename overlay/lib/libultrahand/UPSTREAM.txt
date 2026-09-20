@@ -1,0 +1,7 @@
+Project: libultrahand
+Repository: https://github.com/ppkantorski/libultrahand
+Release: v2.5.3
+Commit: 856ddbddd796fc4a59ad2e0bf939c5963e6f9dd2
+License: GPL-2.0-or-later (see LICENSE and SUB_LICENSE)
+Bundle contents: modified libtesla, libultra, cJSON 1.7.18 and stb_truetype 1.26
+Component map: COMPONENTS.md

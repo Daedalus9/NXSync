@@ -1,0 +1,131 @@
+{
+  "schema": "nxsync-dependency-sources",
+  "version": 1,
+  "toolchain_image": "devkitpro/devkita64:20260219@sha256:1fc388c3a0d34bd2045a6dadcb1020e069d5f876a187fd705de14b4440c00282",
+  "packages": {
+    "libnx": "4.12.0-1",
+    "switch-curl": "7.69.1-5",
+    "switch-mbedtls": "2.28.10-1",
+    "switch-zlib": "1.3.1-1",
+    "dkp-toolchain-vars": "1.0.5-1"
+  },
+  "recipe_repository": "https://github.com/devkitPro/pacman-packages",
+  "recipe_commit": "f103fe88e37180ecd0b7a9173b52b7580a54f71a",
+  "files": [
+    {
+      "path": "upstream/curl-7.69.1.tar.xz",
+      "url": "https://curl.se/download/curl-7.69.1.tar.xz",
+      "sha256": "03c7d5e6697f7b7e40ada1b2256e565a555657398e6c1fcfa4cb251ccd819d4f"
+    },
+    {
+      "path": "upstream/mbedtls-2.28.10.tar.bz2",
+      "url": "https://github.com/Mbed-TLS/mbedtls/releases/download/mbedtls-2.28.10/mbedtls-2.28.10.tar.bz2",
+      "sha256": "19e5b81fdac0fe22009b9e2bdcd52d7dcafbf62bc67fc59cf0a76b5b5540d149"
+    },
+    {
+      "path": "upstream/zlib-1.3.1.tar.xz",
+      "url": "https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.xz",
+      "sha256": "38ef96b8dfe510d42707d9c781877914792541133e1870841463bfa73f883e32"
+    },
+    {
+      "path": "upstream/libnx-4.12.0.tar.gz",
+      "url": "https://github.com/switchbrew/libnx/archive/refs/tags/v4.12.0.tar.gz",
+      "sha256": "1665209994d67b4b236d80fa200499853473a7e2bb502d5045d00fc0170f90ef"
+    },
+    {
+      "path": "recipes/switch/curl/PKGBUILD",
+      "url": "https://raw.githubusercontent.com/devkitPro/pacman-packages/f103fe88e37180ecd0b7a9173b52b7580a54f71a/switch/curl/PKGBUILD",
+      "sha256": "4e649bcb1ffd8b15822144c9ea26680f668c425983732b779c98f8e48058ae65"
+    },
+    {
+      "path": "recipes/switch/curl/switch-curl.patch",
+      "url": "https://raw.githubusercontent.com/devkitPro/pacman-packages/f103fe88e37180ecd0b7a9173b52b7580a54f71a/switch/curl/switch-curl.patch",
+      "sha256": "723c7d884fc7c39ae1a3115ba245bb8c1415da47bbd60ab8f943ca98f92ebc9a"
+    },
+    {
+      "path": "recipes/switch/mbedtls/mbedtls-2.28.10.patch",
+      "url": "https://raw.githubusercontent.com/devkitPro/pacman-packages/f103fe88e37180ecd0b7a9173b52b7580a54f71a/switch/mbedtls/mbedtls-2.28.10.patch",
+      "sha256": "31cd10803cb47d7a4bb95124f59d997150e961f87ce2911ed25e1af120086311"
+    },
+    {
+      "path": "recipes/switch/mbedtls/PKGBUILD",
+      "url": "https://raw.githubusercontent.com/devkitPro/pacman-packages/f103fe88e37180ecd0b7a9173b52b7580a54f71a/switch/mbedtls/PKGBUILD",
+      "sha256": "6dca07114f73f5f486d4e43ae8280e80c8bf8a56b77c1d8d6d8204abc409fb34"
+    },
+    {
+      "path": "recipes/switch/zlib/PKGBUILD",
+      "url": "https://raw.githubusercontent.com/devkitPro/pacman-packages/f103fe88e37180ecd0b7a9173b52b7580a54f71a/switch/zlib/PKGBUILD",
+      "sha256": "d081e7d1d4b4456989a4c78c90b41128654cf991e179e1384ab1aa46a4fd4c32"
+    },
+    {
+      "path": "recipes/libnx/PKGBUILD",
+      "url": "https://raw.githubusercontent.com/devkitPro/pacman-packages/f103fe88e37180ecd0b7a9173b52b7580a54f71a/libnx/PKGBUILD",
+      "sha256": "dce0573ea685bf06177765adfef794b719ff97944af1f24a3c8eed4e12adb6e4"
+    },
+    {
+      "path": "recipes/dkp-toolchain-vars/3dsvars.sh",
+      "url": "https://raw.githubusercontent.com/devkitPro/pacman-packages/f103fe88e37180ecd0b7a9173b52b7580a54f71a/dkp-toolchain-vars/3dsvars.sh",
+      "sha256": "679c9e428c6ee6f482299679c1f0b576cec628afb145e19def497894864dd509"
+    },
+    {
+      "path": "recipes/dkp-toolchain-vars/armv4tvars.sh",
+      "url": "https://raw.githubusercontent.com/devkitPro/pacman-packages/f103fe88e37180ecd0b7a9173b52b7580a54f71a/dkp-toolchain-vars/armv4tvars.sh",
+      "sha256": "7bc0176c5dbea1ab6acaa98a055a1ab81989152d68b582fc57612972f394ac07"
+    },
+    {
+      "path": "recipes/dkp-toolchain-vars/cubevars.sh",
+      "url": "https://raw.githubusercontent.com/devkitPro/pacman-packages/f103fe88e37180ecd0b7a9173b52b7580a54f71a/dkp-toolchain-vars/cubevars.sh",
+      "sha256": "004fd94dfc9e7a19281fec19c0341686f4dbf00d1f3c9c5590a150e1faac2360"
+    },
+    {
+      "path": "recipes/dkp-toolchain-vars/devkita64.sh",
+      "url": "https://raw.githubusercontent.com/devkitPro/pacman-packages/f103fe88e37180ecd0b7a9173b52b7580a54f71a/dkp-toolchain-vars/devkita64.sh",
+      "sha256": "f3caba3a8864a31a50ff50131f39d160013b6d0b8a2e7e6ac90ca44b591fcb57"
+    },
+    {
+      "path": "recipes/dkp-toolchain-vars/devkitarm.sh",
+      "url": "https://raw.githubusercontent.com/devkitPro/pacman-packages/f103fe88e37180ecd0b7a9173b52b7580a54f71a/dkp-toolchain-vars/devkitarm.sh",
+      "sha256": "000b49cce7a925cb096fbac43501ef1c89511861a3ea2091569ae71aa108369b"
+    },
+    {
+      "path": "recipes/dkp-toolchain-vars/devkitppc.sh",
+      "url": "https://raw.githubusercontent.com/devkitPro/pacman-packages/f103fe88e37180ecd0b7a9173b52b7580a54f71a/dkp-toolchain-vars/devkitppc.sh",
+      "sha256": "b69edeee95dfece986941531a7e2c314cc550ab578b300997e0d5de9e825597c"
+    },
+    {
+      "path": "recipes/dkp-toolchain-vars/ndsvars.sh",
+      "url": "https://raw.githubusercontent.com/devkitPro/pacman-packages/f103fe88e37180ecd0b7a9173b52b7580a54f71a/dkp-toolchain-vars/ndsvars.sh",
+      "sha256": "223f87989791295ef5170d33698390fb1389c4f3cfad735f47fec5757f13c452"
+    },
+    {
+      "path": "recipes/dkp-toolchain-vars/PKGBUILD",
+      "url": "https://raw.githubusercontent.com/devkitPro/pacman-packages/f103fe88e37180ecd0b7a9173b52b7580a54f71a/dkp-toolchain-vars/PKGBUILD",
+      "sha256": "7049f740b0723f11b4d2250d0524b65bf0cba2ecde5d45dc594db6c5d1791e67"
+    },
+    {
+      "path": "recipes/dkp-toolchain-vars/portlibs_prefix.sh",
+      "url": "https://raw.githubusercontent.com/devkitPro/pacman-packages/f103fe88e37180ecd0b7a9173b52b7580a54f71a/dkp-toolchain-vars/portlibs_prefix.sh",
+      "sha256": "7913cb3d38e78ede19673912f25970d678912404399e5c10c744726bbafd5f84"
+    },
+    {
+      "path": "recipes/dkp-toolchain-vars/ppcvars.sh",
+      "url": "https://raw.githubusercontent.com/devkitPro/pacman-packages/f103fe88e37180ecd0b7a9173b52b7580a54f71a/dkp-toolchain-vars/ppcvars.sh",
+      "sha256": "e3156d1e6671bfc9ad6a343d26da8cbddcfc4d8e5321ddc07cb2b4934e20ed66"
+    },
+    {
+      "path": "recipes/dkp-toolchain-vars/switchvars.sh",
+      "url": "https://raw.githubusercontent.com/devkitPro/pacman-packages/f103fe88e37180ecd0b7a9173b52b7580a54f71a/dkp-toolchain-vars/switchvars.sh",
+      "sha256": "5ade1211e616a7eb540c3660839d17af050c41c7c9ee89242ce4fe7afac4df52"
+    },
+    {
+      "path": "recipes/dkp-toolchain-vars/wiiuvars.sh",
+      "url": "https://raw.githubusercontent.com/devkitPro/pacman-packages/f103fe88e37180ecd0b7a9173b52b7580a54f71a/dkp-toolchain-vars/wiiuvars.sh",
+      "sha256": "0f096b32a3216916553360948d2f91f92f4657844a1618cb84bf96a797c44979"
+    },
+    {
+      "path": "recipes/dkp-toolchain-vars/wiivars.sh",
+      "url": "https://raw.githubusercontent.com/devkitPro/pacman-packages/f103fe88e37180ecd0b7a9173b52b7580a54f71a/dkp-toolchain-vars/wiivars.sh",
+      "sha256": "e35283a019b5e032c8085e3085b46ab80cea58851c087ba4269a502195ade359"
+    }
+  ]
+}

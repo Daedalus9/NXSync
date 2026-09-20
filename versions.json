@@ -1,0 +1,7 @@
+{
+  "nro": "0.30.12-rc2",
+  "sysmodule": "0.14.6-rc1",
+  "cloud_worker": "0.8.9-rc1",
+  "overlay": "0.3.22-rc1",
+  "installer": "0.1.13-rc2"
+}

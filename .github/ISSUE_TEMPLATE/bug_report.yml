@@ -1,0 +1,62 @@
+name: Bug report
+description: Report reproducible NXSync behavior without uploading private save or credential data.
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not attach `config.ini`, app passwords, save archives, profile UIDs, device IDs or an unredacted cloud `_index`.
+  - type: input
+    id: nxsync_versions
+    attributes:
+      label: NXSync component versions
+      description: NRO, observer, worker and overlay versions shown by NXSync.
+      placeholder: "NRO 0.x, observer 0.x, worker 0.x, overlay 0.x"
+    validations:
+      required: true
+  - type: input
+    id: atmosphere
+    attributes:
+      label: Atmosphère and firmware versions
+      placeholder: "Atmosphère 1.x.x, firmware x.x.x"
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      options:
+        - emuMMC
+        - sysMMC
+        - Unknown
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Include whether the console was online and which automatic operation was enabled.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy confirmation
+      options:
+        - label: I removed credentials, save data, profile UIDs and device identifiers from every attachment.
+          required: true
+
