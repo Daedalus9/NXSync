@@ -53,7 +53,9 @@ HTTPS server and a temporary test certificate, without a real Nextcloud account.
 
 ## Version-specific Atmosphère payloads
 
-Clone Atmosphère once with submodules. Check out one of the exact commits from
+Use a full clone of Atmosphère with submodules, without `--filter`: the build helper
+creates a standalone clone from it and needs all Git objects available locally.
+Check out one of the exact commits from
 [`compatibility.json`](../compatibility.json); the helper refuses any other HEAD.
 
 ```sh

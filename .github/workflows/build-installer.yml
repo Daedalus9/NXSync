@@ -44,7 +44,9 @@ jobs:
       - name: Fetch exact Atmosphère history
         run: |
           mkdir -p .artifacts/upstream
-          git clone --filter=blob:none https://github.com/Atmosphere-NX/Atmosphere.git .artifacts/upstream/atmosphere-source
+          # The payload helper clones this repository through upload-pack.
+          # Keep all objects locally; a partial clone cannot reliably serve them.
+          git clone --no-checkout https://github.com/Atmosphere-NX/Atmosphere.git .artifacts/upstream/atmosphere-source
           git -C .artifacts/upstream/atmosphere-source checkout 5388824be146a89619e8d641acd64599cf1c5f62
 
       - name: Build Atmosphère 1.11.2 payload
