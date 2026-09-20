@@ -1,0 +1,68 @@
+# devkitPro outputs
+build/
+build-*/
+dist/
+*.d
+*.elf
+*.lst
+*.map
+*.nacp
+*.nro
+*.npdm
+*.nso
+*.nsp
+*.ovl
+*.romfs
+
+# Release archives and transient packages
+*.zip
+*.7z
+*.tar
+*.tar.gz
+*.tar.xz
+*.xz
+
+# Local NXSync configuration and runtime state
+config.ini
+device_id.txt
+compatibility.lock
+*.status
+*.request
+*.decision
+*.action
+launch.restore-*
+queue/
+backups/
+restore/
+_index/
+
+# Installer release payloads are generated from verified builds
+installer/romfs/common/
+installer/romfs/payloads/*
+!installer/romfs/payloads/.gitkeep
+
+# Crash reports, diagnostics and save data
+*.bin
+*.log
+fatal_errors/
+fatal_reports/
+crash_reports/
+
+# Local dependency checkouts and inspection data
+.tmp-*/
+.inspect-*/
+.verify-*/
+release-*/
+.artifacts/
+installer/payload-manifest.generated.json
+
+# Editors and operating systems
+__pycache__/
+*.py[cod]
+*.new-*
+*.bak
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

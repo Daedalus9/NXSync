@@ -1,0 +1,30 @@
+[
+  {
+    "file": "GCC-GPL-3.0.txt",
+    "url": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-15.2.0/COPYING3",
+    "source_sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
+    "member": null,
+    "license_sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"
+  },
+  {
+    "file": "GCC-Runtime-Exception-3.1.txt",
+    "url": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-15.2.0/COPYING.RUNTIME",
+    "source_sha256": "9d6b43ce4d8de0c878bf16b54d8e7a10d9bd42b75178153e3af6a815bdc90f74",
+    "member": null,
+    "license_sha256": "9d6b43ce4d8de0c878bf16b54d8e7a10d9bd42b75178153e3af6a815bdc90f74"
+  },
+  {
+    "file": "newlib-4.6.0-COPYING.txt",
+    "url": "https://sourceware.org/pub/newlib/newlib-4.6.0.20260123.tar.gz",
+    "source_sha256": "6ff27e3bf022666f43f7802255be680eeff722ac181b1725d21e2e8318604ee3",
+    "member": "newlib-4.6.0.20260123/COPYING.NEWLIB",
+    "license_sha256": "f3afe48e4bc6ed8466a42e9dacb6be1d8f9cbf5aac15cb8e474a5ccde8b40ef6"
+  },
+  {
+    "file": "newlib-4.4.0-COPYING.txt",
+    "url": "https://sourceware.org/pub/newlib/newlib-4.4.0.20231231.tar.gz",
+    "source_sha256": "0c166a39e1bf0951dfafcd68949fe0e4b6d3658081d6282f39aeefc6310f2f13",
+    "member": "newlib-4.4.0.20231231/COPYING.NEWLIB",
+    "license_sha256": "9a59b4ee3af067045fe0ea78786201c42d54756fe48cbccf44f3dfc398474717"
+  }
+]

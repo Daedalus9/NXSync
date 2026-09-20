@@ -1,0 +1,46 @@
+{
+  "schema": "nxsync-atmosphere-compatibility",
+  "schema_version": 2,
+  "nxsync_release": "0.30.12-rc2",
+  "builds": [
+    {
+      "atmosphere_version": "1.11.2",
+      "upstream_commit": "5388824be146a89619e8d641acd64599cf1c5f62",
+      "upstream_branch": "master",
+      "official_release_url": "https://github.com/Atmosphere-NX/Atmosphere/releases/download/1.11.2/atmosphere-1.11.2-master-5388824be%2Bhbl-2.4.5%2Bhbmenu-3.6.1.zip",
+      "official_release_zip_sha256": "29ce59ae237be59cd20c15fff46cd1f5e127ec2b607e65a3412e396797448649",
+      "official_package3_sha256": "f162a419887374028103e097dc5679f97b3b22501fee667405a3bc965eeaa3f2",
+      "official_stratosphere_romfs_sha256": "a49c9d4846dd204e92678db7d0d494f4fc4f6f78943cd245af38c15cc187130b",
+      "nxsync_stratosphere_romfs_sha256": "4566d07923c188bc85ca7ebff800fe11ad8604ce3b31c468360f008743eecae6",
+      "dmnt_patch": "patches/atmosphere/1.11.2/dmnt-cheat-api.patch",
+      "nxsync_dmnt_override_sha256": "a4f97e724a0805b310bfd5bf0ee3e697c6bd87c09e7112996631071cd85c3d2c",
+      "previous_nxsync_dmnt_override_sha256": [
+        "0c10e52b7b7e8c17680413058cffdb5b60fd33dc03ca23f955cc89b9ff9be48e",
+        "1491d051cb591f7253e639cbe3c779b93e33c343391a1d4938d187716472cd4d",
+        "ef8df17e05f4bcc0cd76b636db43207d311355eed9ede7ad5f867e1259133524"
+      ],
+      "toolchain_image": "devkitpro/devkita64:20260219@sha256:1fc388c3a0d34bd2045a6dadcb1020e069d5f876a187fd705de14b4440c00282"
+    },
+    {
+      "atmosphere_version": "1.8.0",
+      "upstream_commit": "c6014b533fb3b53998bc2cbd2608769fd44a5bc1",
+      "upstream_branch": "master",
+      "official_release_url": "https://github.com/Atmosphere-NX/Atmosphere/releases/download/1.8.0-prerelease/atmosphere-1.8.0-master-c6014b533%2Bhbl-2.4.4%2Bhbmenu-3.6.0.zip",
+      "official_release_zip_sha256": "836889734e7b67d8a93973707cb4a05138a6a631500c3f28620f22ce8793ffcc",
+      "official_package3_sha256": "b991622c2ef17b2631cafabdfe6bebb8eb39c523cff5d862890f047784a1dc83",
+      "official_stratosphere_romfs_sha256": "ee41ead8b90aa8c5ff9bdcf7825a8b78d967eb8603e1497b72d766cfc8e28c78",
+      "nxsync_stratosphere_romfs_sha256": "2b00a4bfea5c6590cca0e8e503126f27e188ffe0f7eaf04c0fbfb5c244a15539",
+      "dmnt_patch": "patches/atmosphere/1.8.0/dmnt-cheat-api.patch",
+      "nxsync_dmnt_override_sha256": "d0e69270f6406a99381e6748f048470dd9e054fc89c8269ce22165c70b988cdf",
+      "previous_nxsync_dmnt_override_sha256": [
+        "1e6a366198dd93e92ea7e2fa9445bf4ccc5d9ad7b14aba306ccbb6d4ad3942b7",
+        "4bcdedda78bc8b5909d4ea6065dd4c169d1ff7bf54ac43e4d262663074d9c2d5",
+        "db43bcc1150b5f2258f4132528c4e8bf276571f46e9f62840f1db8934a2e7892",
+        "43e35d81d6e0d103961a4ce5ec2cb846deba48f48e4685cf92a0d7263fcb496a"
+      ],
+      "libnx_source_url": "https://github.com/switchbrew/libnx.git",
+      "libnx_commit": "250a5777f7833a60da2434cab567bcf9263a1967",
+      "toolchain_image": "devkitpro/devkita64:20241023@sha256:cc31e83024e7e83d72256803b17d398a2922cba71a06f6fe364d25cf06ca99ce"
+    }
+  ]
+}

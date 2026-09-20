@@ -1,0 +1,108 @@
+name: Build installer
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  installer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install host test dependencies
+        run: sudo apt-get update && sudo apt-get install -y libmbedtls-dev libcurl4-openssl-dev openssl
+
+      - name: Validate source tree
+        run: |
+          python3 scripts/check-public-tree.py
+          python3 scripts/check-versions.py
+          python3 scripts/check-licensing.py
+          cmake -S tests -B build-tests -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-tests --parallel 2
+          ctest --test-dir build-tests --output-on-failure
+
+      - name: Build common NXSync components
+        run: >-
+          docker run --rm
+          --user "$(id -u):$(id -g)"
+          --mount type=bind,source="$GITHUB_WORKSPACE",target=/project
+          -w /project
+          devkitpro/devkita64:20260219@sha256:1fc388c3a0d34bd2045a6dadcb1020e069d5f876a187fd705de14b4440c00282
+          make -j2 components
+
+      - name: Verify staged dependency licenses
+        run: |
+          test -f .artifacts/dependency-licenses/SHA256SUMS.txt
+          (cd .artifacts/dependency-licenses && sha256sum --check SHA256SUMS.txt)
+
+      - name: Fetch exact Atmosphère history
+        run: |
+          mkdir -p .artifacts/upstream
+          git clone --filter=blob:none https://github.com/Atmosphere-NX/Atmosphere.git .artifacts/upstream/atmosphere-source
+          git -C .artifacts/upstream/atmosphere-source checkout 5388824be146a89619e8d641acd64599cf1c5f62
+
+      - name: Build Atmosphère 1.11.2 payload
+        run: >-
+          python3 scripts/build-atmosphere-payload.py
+          --version 1.11.2
+          --source .artifacts/upstream/atmosphere-source
+
+      - name: Build Atmosphère 1.8.0 payload
+        run: |
+          git -C .artifacts/upstream/atmosphere-source checkout c6014b533fb3b53998bc2cbd2608769fd44a5bc1
+          python3 scripts/build-atmosphere-payload.py \
+            --version 1.8.0 \
+            --source .artifacts/upstream/atmosphere-source
+
+      - name: Stage payloads and build installer
+        run: |
+          python3 scripts/stage-installer-payloads.py
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --mount type=bind,source="$GITHUB_WORKSPACE",target=/project \
+            -w /project \
+            devkitpro/devkita64:20260219@sha256:1fc388c3a0d34bd2045a6dadcb1020e069d5f876a187fd705de14b4440c00282 \
+            make installer
+          python3 scripts/stage-dependency-sources.py
+          python3 scripts/package-installer.py
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: nxsync-installer
+          path: |
+            dist/NXSync-Installer-*.zip
+            dist/NXSync-Installer-*-corresponding-source.tar.xz
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
+
+  draft-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: installer
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: Require a versioned commit on main
+        run: |
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          python3 -c 'import json,os; assert os.environ["GITHUB_REF_NAME"] == "v" + json.load(open("versions.json"))["nro"]'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: nxsync-installer
+          path: dist
+      - name: Verify assets and create a draft prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          (cd dist && sha256sum --check SHA256SUMS.txt)
+          gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --draft --prerelease --title "$GITHUB_REF_NAME" --notes-file docs/RELEASE_NOTES.md

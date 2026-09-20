@@ -1,0 +1,513 @@
+diff --git a/stratosphere/dmnt/dmnt.json b/stratosphere/dmnt/dmnt.json
+index ecd42b1..21a7dd9 100644
+--- a/stratosphere/dmnt/dmnt.json
++++ b/stratosphere/dmnt/dmnt.json
+@@ -1,4 +1,5 @@
+ {
++	"nxsync_modification_notice": "Modified by Daedalus9 on 2026-09-20: enables process-state queries for cancellable NXSync preflight.",
+ 	"name":	"dmnt",
+ 	"title_id":	"0x010000000000000d",
+ 	"title_id_range_min":	"0x010000000000000d",
+@@ -112,6 +113,7 @@
+ 				"svcWriteDebugProcessMemory":	"0x6b",
+ 				"svcSetHardwareBreakPoint":	"0x6c",
+ 				"svcGetDebugThreadParam":	"0x6d",
++				"svcGetProcessInfo":	"0x7c",
+ 				"svcCallSecureMonitor":	"0x7f"
+ 			}
+ 		}, {
+diff --git a/stratosphere/dmnt/source/cheat/impl/dmnt_cheat_api.cpp b/stratosphere/dmnt/source/cheat/impl/dmnt_cheat_api.cpp
+index 627c56b..814ca97 100644
+--- a/stratosphere/dmnt/source/cheat/impl/dmnt_cheat_api.cpp
++++ b/stratosphere/dmnt/source/cheat/impl/dmnt_cheat_api.cpp
+@@ -13,6 +13,12 @@
+  * You should have received a copy of the GNU General Public License
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
++/*
++ * NXSync modification notice:
++ * Modified by Daedalus9 on 2026-09-17.
++ * Adds NXSync preflight and a durable restore permission handshake.
++ * SPDX-License-Identifier: GPL-2.0-only
++ */
+ #include <stratosphere.hpp>
+ #include "dmnt_cheat_api.hpp"
+ #include "dmnt_cheat_vm.hpp"
+@@ -26,6 +32,401 @@ namespace ams::dmnt::cheat::impl {
+         constexpr size_t MaxCheatCount = 0x80;
+         constexpr size_t MaxFrozenAddressCount = 0x80;
+ 
++        constexpr const char *NxsyncGateEnabledPath =
++            "sdmc:/config/NXSync/launch-gate.enabled";
++        constexpr const char *NxsyncLaunchRequestPath =
++            "sdmc:/config/NXSync/launch.request";
++        constexpr const char *NxsyncLaunchRequestPendingPath =
++            "sdmc:/config/NXSync/launch.request.pending";
++        constexpr const char *NxsyncLaunchPublishStatusPath =
++            "sdmc:/config/NXSync/launch-publish.status";
++        constexpr const char *NxsyncLaunchPublishStatusPendingPath =
++            "sdmc:/config/NXSync/launch-publish.status.pending";
++        constexpr const char *NxsyncLaunchDecisionPath =
++            "sdmc:/config/NXSync/launch.decision";
++        constexpr const char *NxsyncLaunchActionPath =
++            "sdmc:/config/NXSync/launch.action";
++        constexpr const char *NxsyncOverlayRequestPath =
++            "sdmc:/config/NXSync/overlay-open.request";
++        constexpr const char *NxsyncPreflightRequestPath =
++            "sdmc:/config/NXSync/preflight.request";
++        constexpr const char *NxsyncPreflightStatusPath =
++            "sdmc:/config/NXSync/preflight.status";
++        constexpr const char *NxsyncRestoreClaimPath = "sdmc:/config/NXSync/launch.restore-claim";
++        constexpr const char *NxsyncRestoreGrantPath = "sdmc:/config/NXSync/launch.restore-grant";
++        constexpr const char *NxsyncRestoreGuardPath = "sdmc:/config/NXSync/launch.restore-guard";
++        constexpr auto NxsyncGatePollInterval = TimeSpan::FromMilliSeconds(100);
++        constexpr const char *NxsyncLaunchPhasePath = "sdmc:/config/NXSync/launch.phase";
++        constexpr auto NxsyncGateTimeout = TimeSpan::FromSeconds(30);
++        constexpr auto NxsyncChoiceTimeout = TimeSpan::FromMinutes(2);
++        constexpr auto NxsyncDownloadTimeout = TimeSpan::FromMinutes(5);
++        constexpr auto NxsyncPublishRetryInterval = TimeSpan::FromMilliSeconds(2);
++        constexpr int NxsyncPublishRetryCount = 100;
++
++        bool NxsyncFileExists(const char *path) {
++            fs::DirectoryEntryType type;
++            return R_SUCCEEDED(fs::GetEntryType(std::addressof(type), path));
++        }
++
++        void NxsyncDeleteIfPresent(const char *path) {
++            const Result result = fs::DeleteFile(path);
++            AMS_UNUSED(result);
++        }
++
++        Result NxsyncDeleteIfPresentWithRetry(const char *path) {
++            Result result = fs::DeleteFile(path);
++            for (int attempt = 0;
++                 attempt < NxsyncPublishRetryCount
++                    && fs::ResultTargetLocked::Includes(result);
++                 ++attempt) {
++                os::SleepThread(NxsyncPublishRetryInterval);
++                result = fs::DeleteFile(path);
++            }
++            if (R_SUCCEEDED(result) || fs::ResultPathNotFound::Includes(result)) {
++                return ResultSuccess();
++            }
++            return result;
++        }
++
++        Result NxsyncRenameWithRetry(const char *source, const char *target) {
++            Result result = fs::RenameFile(source, target);
++            for (int attempt = 0;
++                 attempt < NxsyncPublishRetryCount
++                    && fs::ResultTargetLocked::Includes(result);
++                 ++attempt) {
++                os::SleepThread(NxsyncPublishRetryInterval);
++                result = fs::RenameFile(source, target);
++            }
++            return result;
++        }
++
++        Result NxsyncWriteClosedFile(
++            const char *path,
++            const char *text,
++            const size_t length) {
++            R_TRY(NxsyncDeleteIfPresentWithRetry(path));
++            R_TRY(fs::CreateFile(path, length, fs::CreateOption_None));
++            {
++                fs::FileHandle file;
++                R_TRY(fs::OpenFile(
++                    std::addressof(file), path, fs::OpenMode_Write));
++                ON_SCOPE_EXIT { fs::CloseFile(file); };
++                R_TRY(fs::WriteFile(
++                    file, 0, text, length, fs::WriteOption::Flush));
++            }
++            R_SUCCEED();
++        }
++
++        Result NxsyncVerifyClosedFile(
++            const char *path,
++            const char *expected,
++            const size_t expected_length,
++            bool *matches) {
++            *matches = false;
++            fs::FileHandle file;
++            R_TRY(fs::OpenFile(
++                std::addressof(file), path, fs::OpenMode_Read));
++            ON_SCOPE_EXIT { fs::CloseFile(file); };
++            s64 actual_size = 0;
++            R_TRY(fs::GetFileSize(std::addressof(actual_size), file));
++            if (actual_size != static_cast<s64>(expected_length)
++                || expected_length >= 192) {
++                R_SUCCEED();
++            }
++            char actual[192] = {};
++            R_TRY(fs::ReadFile(file, 0, actual, expected_length));
++            *matches = std::memcmp(actual, expected, expected_length) == 0;
++            R_SUCCEED();
++        }
++
++        void NxsyncWriteLaunchPublishStatus(
++            const char *state,
++            const char *stage,
++            const u64 sequence,
++            const os::ProcessId process_id,
++            const ncm::ProgramId program_id,
++            const u32 result_value) {
++            char text[384];
++            const int length = util::SNPrintf(
++                text,
++                sizeof(text),
++                "version=1\nstate=%s\nstage=%s\nsequence=%lu\n"
++                "process_id=%lu\ntitle_id=%016lx\nresult=0x%08x\n",
++                state,
++                stage,
++                sequence,
++                process_id.value,
++                program_id.value,
++                result_value);
++            if (length <= 0 || static_cast<size_t>(length) >= sizeof(text)) {
++                return;
++            }
++            if (R_FAILED(NxsyncWriteClosedFile(
++                    NxsyncLaunchPublishStatusPendingPath,
++                    text,
++                    static_cast<size_t>(length)))) {
++                return;
++            }
++            if (R_FAILED(NxsyncDeleteIfPresentWithRetry(
++                    NxsyncLaunchPublishStatusPath))) {
++                return;
++            }
++            const Result rename_result = NxsyncRenameWithRetry(
++                NxsyncLaunchPublishStatusPendingPath,
++                NxsyncLaunchPublishStatusPath);
++            AMS_UNUSED(rename_result);
++        }
++
++        bool NxsyncWriteLaunchRequest(
++            const os::ProcessId process_id,
++            const ncm::ProgramId program_id) {
++            char text[192];
++            const u64 sequence = process_id.value;
++            const int length = util::SNPrintf(
++                text,
++                sizeof(text),
++                "version=2\nsequence=%lu\nprocess_id=%lu\ntitle_id=%016lX\n",
++                sequence,
++                process_id.value,
++                program_id.value);
++            if (length <= 0 || static_cast<size_t>(length) >= sizeof(text)) {
++                NxsyncWriteLaunchPublishStatus(
++                    "error", "format", sequence, process_id, program_id, 0);
++                return false;
++            }
++            Result result = NxsyncWriteClosedFile(
++                NxsyncLaunchRequestPendingPath,
++                text,
++                static_cast<size_t>(length));
++            if (R_FAILED(result)) {
++                NxsyncWriteLaunchPublishStatus(
++                    "error", "write-pending", sequence, process_id,
++                    program_id, result.GetValue());
++                return false;
++            }
++
++            bool matches = false;
++            result = NxsyncVerifyClosedFile(
++                NxsyncLaunchRequestPendingPath,
++                text,
++                static_cast<size_t>(length),
++                std::addressof(matches));
++            if (R_FAILED(result) || !matches) {
++                NxsyncWriteLaunchPublishStatus(
++                    "error", "verify-pending", sequence, process_id,
++                    program_id, R_FAILED(result) ? result.GetValue() : 0);
++                return false;
++            }
++
++            result = NxsyncDeleteIfPresentWithRetry(NxsyncLaunchRequestPath);
++            if (R_FAILED(result)) {
++                NxsyncWriteLaunchPublishStatus(
++                    "error", "delete-current", sequence, process_id,
++                    program_id, result.GetValue());
++                return false;
++            }
++            result = NxsyncRenameWithRetry(
++                NxsyncLaunchRequestPendingPath,
++                NxsyncLaunchRequestPath);
++            if (R_FAILED(result)) {
++                NxsyncWriteLaunchPublishStatus(
++                    "error", "publish", sequence, process_id,
++                    program_id, result.GetValue());
++                return false;
++            }
++
++            matches = false;
++            result = NxsyncVerifyClosedFile(
++                NxsyncLaunchRequestPath,
++                text,
++                static_cast<size_t>(length),
++                std::addressof(matches));
++            if (R_FAILED(result) || !matches) {
++                NxsyncDeleteIfPresent(NxsyncLaunchRequestPath);
++                NxsyncWriteLaunchPublishStatus(
++                    "error", "verify-published", sequence, process_id,
++                    program_id, R_FAILED(result) ? result.GetValue() : 0);
++                return false;
++            }
++
++            NxsyncWriteLaunchPublishStatus(
++                "published", "complete", sequence, process_id, program_id, 0);
++            return true;
++        }
++
++        bool NxsyncReadProtocol(const char *path, char *text, size_t capacity) {
++            fs::FileHandle file;
++            if (R_FAILED(fs::OpenFile(std::addressof(file), path, fs::OpenMode_Read))) return false;
++            ON_SCOPE_EXIT { fs::CloseFile(file); };
++            s64 size = 0;
++            if (R_FAILED(fs::GetFileSize(std::addressof(size), file))
++                || size <= 0 || size >= static_cast<s64>(capacity)) return false;
++            if (R_FAILED(fs::ReadFile(file, 0, text, size))) return false;
++            text[size] = 0;
++            return text[size - 1] == '\n' && std::strlen(text) == static_cast<size_t>(size);
++        }
++
++        bool NxsyncReadDecision(const u64 sequence, const char *action) {
++            char text[1024] = {}, expected[128] = {};
++            if (!NxsyncReadProtocol(NxsyncLaunchDecisionPath, text, sizeof(text))) return false;
++            const int length = util::SNPrintf(expected, sizeof(expected),
++                "version=2\nsequence=%lu\naction=%s\nmessage=", sequence, action);
++            if (length <= 0 || std::strncmp(text, expected, length) != 0) return false;
++            // Messages escape newlines: reject duplicate/extra fields and prefix matches.
++            return std::strchr(text + length, '\n') == text + std::strlen(text) - 1;
++        }
++
++        bool NxsyncReadPhase(const u64 sequence, const char *phase) {
++            char text[128] = {}, expected[128] = {};
++            if (!NxsyncReadProtocol(NxsyncLaunchPhasePath, text, sizeof(text))) return false;
++            util::SNPrintf(expected, sizeof(expected),
++                "version=2\nsequence=%lu\nphase=%s\n", sequence, phase);
++            return std::strcmp(text, expected) == 0;
++        }
++
++        bool NxsyncProcessClosing(const os::NativeHandle handle) {
++            s64 state = 0;
++            // Process handles signal on state changes too; the signal is not an exit test.
++            return R_FAILED(svc::GetProcessInfo(&state, handle, svc::ProcessInfoType_ProcessState))
++                || state == svc::ProcessState_Terminating || state == svc::ProcessState_Terminated;
++        }
++
++        // Starting under a debugger stops the initial thread before any user code,
++        // while moving out of Created (where the kernel rejects HOME termination).
++        // Closing the handle releases the hold; transfer it to dmnt if cheats are used.
++        class NxsyncLaunchHold {
++            private:
++                svc::Handle m_handle = svc::InvalidHandle;
++                bool m_started = false;
++            public:
++                NxsyncLaunchHold() = default;
++                NxsyncLaunchHold(const NxsyncLaunchHold &) = delete;
++                NxsyncLaunchHold &operator=(const NxsyncLaunchHold &) = delete;
++                ~NxsyncLaunchHold() {
++                    if (m_handle != svc::InvalidHandle) os::CloseNativeHandle(m_handle);
++                }
++                Result Begin(const os::ProcessId process_id) {
++                    R_TRY(svc::DebugActiveProcess(&m_handle, process_id.value));
++                    R_TRY(pm::dmnt::StartProcess(process_id));
++                    m_started = true;
++                    R_SUCCEED();
++                }
++                bool Started() const { return m_started; }
++                void Cancel() {
++                    // Do not detach/resume before termination, especially after a grant.
++                    const Result result = svc::TerminateDebugProcess(m_handle);
++                    AMS_UNUSED(result);
++                }
++                svc::Handle TakeHandle() {
++                    const auto handle = m_handle;
++                    m_handle = svc::InvalidHandle;
++                    return handle;
++                }
++        };
++
++        bool NxsyncRestoreGuardExists() {
++            return NxsyncFileExists(NxsyncRestoreGuardPath)
++                || NxsyncFileExists("sdmc:/config/NXSync/launch.restore-guard.bak");
++        }
++
++        bool NxsyncGuardBlocksTitle(const ncm::ProgramId program_id) {
++            char text[256] = {};
++            if (!NxsyncReadProtocol(NxsyncRestoreGuardPath, text, sizeof(text))) return true;
++            const char *title = std::strstr(text, "\ntitle_id=");
++            if (!title || std::strlen(title) < 26 || title[26] != '\n') return true;
++            for (int i = 10; i < 26; ++i) {
++                const char c = title[i];
++                if (!((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F'))) return true;
++            }
++            char expected[32] = {};
++            util::SNPrintf(expected, sizeof(expected), "\ntitle_id=%016lX\n", program_id.value);
++            return std::strncmp(title, expected, 27) == 0;
++        }
++
++        bool NxsyncReadRestoreClaim(const os::ProcessId process_id,
++                                    const ncm::ProgramId program_id, char *claim, size_t capacity) {
++            if (!NxsyncReadProtocol(NxsyncRestoreClaimPath, claim, capacity)) return false;
++            char expected[192] = {};
++            const int length = util::SNPrintf(expected, sizeof(expected),
++                "version=2\nsequence=%lu\nprocess_id=%lu\ntitle_id=%016lX\nprofile_uid=",
++                process_id.value, process_id.value, program_id.value);
++            if (length <= 0 || std::strncmp(claim, expected, length) != 0
++                || std::strlen(claim) != static_cast<size_t>(length + 33)) return false;
++            for (int i = 0; i < 32; ++i) {
++                const char c = claim[length + i];
++                if (!((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F'))) return false;
++            }
++            return claim[length + 32] == '\n';
++        }
++
++        bool NxsyncRunLaunchGate(
++            const os::ProcessId process_id,
++            const ncm::ProgramId program_id,
++            const os::NativeHandle process_handle) {
++            // The persistent marker is checked even if automations are disabled.
++            // Other titles can run (including a full-memory recovery NRO), but
++            // no further automatic restore is offered until recovery completes.
++            if (NxsyncRestoreGuardExists()) return !NxsyncGuardBlocksTitle(program_id);
++            if (!NxsyncFileExists(NxsyncGateEnabledPath)) return true;
++
++            const char *ephemeral[] = {NxsyncLaunchDecisionPath, NxsyncLaunchActionPath,
++                NxsyncOverlayRequestPath, NxsyncPreflightRequestPath, NxsyncPreflightStatusPath,
++                NxsyncRestoreClaimPath, NxsyncRestoreGrantPath, NxsyncLaunchPhasePath};
++            for (const auto path : ephemeral) {
++                char backup[160];
++                util::SNPrintf(backup, sizeof(backup), "%s.bak", path);
++                // Stale grants must be removed successfully before publishing a session.
++                if (R_FAILED(NxsyncDeleteIfPresentWithRetry(backup))
++                    || R_FAILED(NxsyncDeleteIfPresentWithRetry(path))) return false;
++            }
++            ON_SCOPE_EXIT {
++                NxsyncDeleteIfPresent(NxsyncRestoreGrantPath);
++                NxsyncDeleteIfPresent(NxsyncLaunchRequestPath);
++                NxsyncDeleteIfPresent(NxsyncLaunchPhasePath);
++            };
++            if (!NxsyncWriteLaunchRequest(process_id, program_id)) return true;
++
++            os::Tick phase_start = os::GetSystemTick();
++            auto timeout = NxsyncGateTimeout;
++            int phase = 0; // checking -> choice -> download; never reset a phase deadline.
++            bool restore_granted = false;
++            while (true) {
++                if (NxsyncProcessClosing(process_handle)) return false;
++                if (NxsyncReadDecision(process_id.value, "abort")) return false;
++                if (NxsyncReadDecision(process_id.value, "allow")) return !NxsyncRestoreGuardExists();
++                const auto now = os::GetSystemTick();
++                const auto elapsed = (now - phase_start).ToTimeSpan();
++                // A late phase or claim cannot revive an expired session.
++                if (!restore_granted && elapsed >= timeout) return true;
++                if (restore_granted && elapsed >= TimeSpan::FromMinutes(30)) return false;
++                if (!restore_granted) {
++                    if (phase < 2 && NxsyncReadPhase(process_id.value, "download")) {
++                        phase = 2;
++                        phase_start = now;
++                        timeout = NxsyncDownloadTimeout;
++                    } else if (phase == 0 && NxsyncReadPhase(process_id.value, "choice")) {
++                        phase = 1;
++                        phase_start = now;
++                        timeout = NxsyncChoiceTimeout;
++                    }
++                    char claim[192] = {};
++                    if (NxsyncReadRestoreClaim(process_id, program_id, claim, sizeof(claim))) {
++                        if (NxsyncRestoreGuardExists()) return false;
++                        const auto length = std::strlen(claim);
++                        // Flush and verify the persistent guard BEFORE publishing the grant.
++                        if (R_FAILED(NxsyncWriteClosedFile(NxsyncRestoreGuardPath, claim, length))) return false;
++                        bool matches = false;
++                        if (R_FAILED(NxsyncVerifyClosedFile(NxsyncRestoreGuardPath, claim, length, &matches))
++                            || !matches) return false;
++                        restore_granted = true;
++                        phase_start = os::GetSystemTick();
++                        if (R_FAILED(NxsyncWriteClosedFile(NxsyncRestoreGrantPath, claim, length))) return false;
++                    }
++                }
++                os::SleepThread(NxsyncGatePollInterval);
++            }
++        }
++
+         class FrozenAddressMapEntry : public util::IntrusiveRedBlackTreeBaseNode<FrozenAddressMapEntry> {
+             public:
+                 using RedBlackKeyType = u64;
+@@ -796,8 +1197,10 @@ namespace ams::dmnt::cheat::impl {
+ 
+             /* Get the application process's ID. */
+             R_ABORT_UNLESS_IF_NEW_PROCESS(pm::dmnt::GetApplicationProcessId(std::addressof(m_cheat_process_metadata.process_id)));
++            NxsyncLaunchHold nxsync_hold;
++            bool nxsync_launch_cancelled = false;
+             auto proc_guard = SCOPE_GUARD {
+-                if (on_process_launch) {
++                if (on_process_launch && !nxsync_launch_cancelled && !nxsync_hold.Started()) {
+                     this->StartProcess(m_cheat_process_metadata.process_id);
+                 }
+                 m_cheat_process_metadata.process_id = os::ProcessId{};
+@@ -814,12 +1217,24 @@ namespace ams::dmnt::cheat::impl {
+ 
+                 m_cheat_process_metadata.program_id = loc.program_id;
+ 
+-                R_ABORT_UNLESS(svc::GetInfo(std::addressof(m_cheat_process_metadata.heap_extents.base),  svc::InfoType_HeapRegionAddress,  proc_h, 0));
+-                R_ABORT_UNLESS(svc::GetInfo(std::addressof(m_cheat_process_metadata.heap_extents.size),  svc::InfoType_HeapRegionSize,     proc_h, 0));
+-                R_ABORT_UNLESS(svc::GetInfo(std::addressof(m_cheat_process_metadata.alias_extents.base), svc::InfoType_AliasRegionAddress, proc_h, 0));
+-                R_ABORT_UNLESS(svc::GetInfo(std::addressof(m_cheat_process_metadata.alias_extents.size), svc::InfoType_AliasRegionSize,    proc_h, 0));
+-                R_ABORT_UNLESS(svc::GetInfo(std::addressof(m_cheat_process_metadata.aslr_extents.base),  svc::InfoType_AslrRegionAddress,  proc_h, 0));
+-                R_ABORT_UNLESS(svc::GetInfo(std::addressof(m_cheat_process_metadata.aslr_extents.size),  svc::InfoType_AslrRegionSize,     proc_h, 0));
++                if (on_process_launch && (NxsyncFileExists(NxsyncGateEnabledPath) || NxsyncRestoreGuardExists())) {
++                    R_ABORT_UNLESS(nxsync_hold.Begin(m_cheat_process_metadata.process_id));
++                    if (!NxsyncRunLaunchGate(
++                            m_cheat_process_metadata.process_id,
++                            m_cheat_process_metadata.program_id,
++                            proc_h)) {
++                        nxsync_launch_cancelled = true;
++                        nxsync_hold.Cancel();
++                        R_THROW(dmnt::cheat::ResultCheatNotAttached());
++                    }
++                }
++
++                R_TRY(svc::GetInfo(std::addressof(m_cheat_process_metadata.heap_extents.base),  svc::InfoType_HeapRegionAddress,  proc_h, 0));
++                R_TRY(svc::GetInfo(std::addressof(m_cheat_process_metadata.heap_extents.size),  svc::InfoType_HeapRegionSize,     proc_h, 0));
++                R_TRY(svc::GetInfo(std::addressof(m_cheat_process_metadata.alias_extents.base), svc::InfoType_AliasRegionAddress, proc_h, 0));
++                R_TRY(svc::GetInfo(std::addressof(m_cheat_process_metadata.alias_extents.size), svc::InfoType_AliasRegionSize,    proc_h, 0));
++                R_TRY(svc::GetInfo(std::addressof(m_cheat_process_metadata.aslr_extents.base),  svc::InfoType_AslrRegionAddress,  proc_h, 0));
++                R_TRY(svc::GetInfo(std::addressof(m_cheat_process_metadata.aslr_extents.size),  svc::InfoType_AslrRegionSize,     proc_h, 0));
+ 
+                 /* If new process launch, we may not want to actually attach. */
+                 if (on_process_launch) {
+@@ -833,7 +1248,7 @@ namespace ams::dmnt::cheat::impl {
+                 s32 num_modules;
+ 
+                 /* TODO: ldr::dmnt:: */
+-                R_ABORT_UNLESS_IF_NEW_PROCESS(ldrDmntGetProcessModuleInfo(static_cast<u64>(m_cheat_process_metadata.process_id), reinterpret_cast<LoaderModuleInfo *>(proc_modules), util::size(proc_modules), std::addressof(num_modules)));
++                R_TRY(ldrDmntGetProcessModuleInfo(static_cast<u64>(m_cheat_process_metadata.process_id), reinterpret_cast<LoaderModuleInfo *>(proc_modules), util::size(proc_modules), std::addressof(num_modules)));
+ 
+                 /* All applications must have two modules. */
+                 /* Only accept one (which means we're attaching to HBL) */
+@@ -860,8 +1275,10 @@ namespace ams::dmnt::cheat::impl {
+             }
+ 
+             /* Open a debug handle. */
+-            svc::Handle debug_handle = svc::InvalidHandle;
+-            R_ABORT_UNLESS_IF_NEW_PROCESS(svc::DebugActiveProcess(std::addressof(debug_handle), m_cheat_process_metadata.process_id.value));
++            svc::Handle debug_handle = nxsync_hold.TakeHandle();
++            if (debug_handle == svc::InvalidHandle) {
++                R_ABORT_UNLESS_IF_NEW_PROCESS(svc::DebugActiveProcess(std::addressof(debug_handle), m_cheat_process_metadata.process_id.value));
++            }
+ 
+             /* Set our debug handle. */
+             m_cheat_process_debug_handle = debug_handle;
+@@ -873,8 +1290,8 @@ namespace ams::dmnt::cheat::impl {
+             m_broken_unsafe = false;
+             m_unsafe_break_event.Signal();
+ 
+-            /* If new process, start the process. */
+-            if (on_process_launch) {
++            /* The preflight already started the process under the debug hold. */
++            if (on_process_launch && !nxsync_hold.Started()) {
+                 this->StartProcess(m_cheat_process_metadata.process_id);
+             }
+ 
